@@ -1,0 +1,6 @@
+{
+  "name": "Quiz to Build — Smart City Adventure",
+  "description": "An interactive 3D educational city-building game where players solve quizzes to expand a thriving smart metropolis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
