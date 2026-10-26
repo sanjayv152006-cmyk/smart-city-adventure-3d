@@ -1,7 +1,8 @@
 {
-  "name": "react-example",
+  "name": "quiz-to-build---smart-city-adventure",
+  "description": "Quiz to Build — Smart City Adventure: An interactive 3D educational city-building game where players solve quizzes to expand a thriving smart metropolis.",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -9,7 +10,8 @@
     "build": "vite build && mkdir -p assets && cp -r dist/assets/* assets/",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node ./node_modules/tsx/dist/cli.mjs scripts/test_progression.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
