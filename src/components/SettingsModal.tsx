@@ -27,6 +27,11 @@ import {
   Eye,
   ArrowLeft,
   Home,
+  LogOut,
+  LogIn,
+  User,
+  UserCheck,
+  Cloud,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -67,6 +72,11 @@ interface SettingsModalProps {
   onOpenWorldMap?: () => void;
   onOpenMap?: () => void;
   onOpenRewards?: () => void;
+  // User Profile & Authentication
+  userProfile?: { id: string; username: string; email: string } | null;
+  isGuest?: boolean;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -99,6 +109,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenWorldMap,
   onOpenMap,
   onOpenRewards,
+  userProfile,
+  isGuest = false,
+  onOpenAuth,
+  onLogout,
 }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -196,6 +210,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Scrollable Settings Sections */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
+          {/* SECTION: ARCHITECT ACCOUNT & CLOUD PROGRESS SYNC */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-slate-800/90 to-slate-850 border border-slate-700/80 shadow-md">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2 text-sky-300 font-bold text-xs uppercase tracking-wider">
+                <User className="w-4 h-4 text-sky-400" />
+                <span>Architect Account & Cloud Sync</span>
+              </div>
+              {userProfile ? (
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                  <Cloud className="w-3 h-3" />
+                  <span>Cloud Synced</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                  <User className="w-3 h-3" />
+                  <span>Guest Mode (Local)</span>
+                </span>
+              )}
+            </div>
+
+            {userProfile ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/70 border border-slate-750">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-sm shrink-0 shadow-md shadow-sky-500/20">
+                    {userProfile.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs sm:text-sm font-black text-white truncate">{userProfile.username}</span>
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    </div>
+                    <div className="text-[11px] text-slate-400 truncate">{userProfile.email}</div>
+                  </div>
+                </div>
+
+                {onLogout && (
+                  <button
+                    onClick={() => {
+                      soundService.playClick();
+                      onLogout();
+                    }}
+                    className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    title="Sign out of your account"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Log Out</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-750 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <span>Guest Architect</span>
+                    <span className="text-[10px] font-normal text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">Local Storage</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                    Progress is saved in this browser. Sign in or create an account to back up and sync your 50 cities across devices!
+                  </p>
+                </div>
+
+                {onOpenAuth && (
+                  <button
+                    onClick={() => {
+                      soundService.playClick();
+                      onOpenAuth();
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-400 hover:from-sky-400 hover:to-emerald-300 text-slate-950 font-black text-xs shadow-md shadow-sky-500/20 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Sign In / Save</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* SECTION 1: 3D VIEW & CAMERA CONTROLS (Moved from bottom dock) */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-800/60 border border-slate-700/70">
             <div className="flex items-center gap-2 mb-3 text-sky-300 font-bold text-xs uppercase tracking-wider">

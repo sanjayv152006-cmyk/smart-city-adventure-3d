@@ -18,8 +18,19 @@ import { UnlockCelebrationModal } from './components/UnlockCelebrationModal';
 import { CityCompletedModal } from './components/CityCompletedModal';
 import { LocationDetailsModal } from './components/LocationDetailsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
+import { AuthService, UserProfile } from './services/authService';
+import { CloudSyncService } from './services/cloudSync';
+import { testFirebaseConnection } from './services/firebase';
+import { User as FirebaseUser } from 'firebase/auth';
 
 export default function App() {
+  // Authentication & Player State
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => AuthService.isGuestMode());
+
   // Screens & Navigation
   const [activeScreen, setActiveScreen] = useState<'welcome' | 'dashboard'>('welcome');
   const [activeMode, setActiveMode] = useState<GameMode>('child');
@@ -81,6 +92,75 @@ export default function App() {
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Firebase Connection & Auth Listener
+  useEffect(() => {
+    testFirebaseConnection();
+
+    const unsubscribe = AuthService.onAuthChanged(async (user, profile) => {
+      setCurrentUser(user);
+      setUserProfile(profile);
+
+      if (user) {
+        setIsGuestMode(false);
+        try {
+          await CloudSyncService.syncOnAuth(user.uid, (mergedChild, mergedStudent) => {
+            setChildProgress(mergedChild);
+            setStudentProgress(mergedStudent);
+          });
+        } catch (e) {
+          console.warn('Cloud sync error on auth change:', e);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const saveProgressState = useCallback((updated: GameProgress) => {
+    StorageService.saveProgress(updated);
+    if (updated.mode === 'child') {
+      setChildProgress(updated);
+    } else {
+      setStudentProgress(updated);
+    }
+    if (currentUser?.uid) {
+      CloudSyncService.saveProgressToCloud(currentUser.uid, updated).catch((err) => {
+        console.warn('Cloud save error:', err);
+      });
+    }
+  }, [currentUser]);
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.logout();
+      setCurrentUser(null);
+      setUserProfile(null);
+      setIsGuestMode(true);
+    } catch (e) {
+      console.warn('Logout error:', e);
+    }
+  };
+
+  const handleLoginSuccess = async () => {
+    setIsAuthModalOpen(false);
+    setIsGuestMode(false);
+    if (currentUser?.uid) {
+      try {
+        await CloudSyncService.syncOnAuth(currentUser.uid, (c, s) => {
+          setChildProgress(c);
+          setStudentProgress(s);
+        });
+      } catch (e) {
+        console.warn('Error syncing on login:', e);
+      }
+    }
+  };
+
+  const handlePlayAsGuest = () => {
+    setIsGuestMode(true);
+    setIsAuthModalOpen(false);
+  };
 
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -161,6 +241,9 @@ export default function App() {
     } else {
       setStudentProgress(fresh);
     }
+    if (currentUser?.uid) {
+      CloudSyncService.saveProgressToCloud(currentUser.uid, fresh).catch(() => {});
+    }
     setNewlyUnlockedId(null);
     setFocusedLocationId(null);
   };
@@ -183,12 +266,7 @@ export default function App() {
       cityProgress: cityProgMap,
     };
 
-    StorageService.saveProgress(updated);
-    if (activeMode === 'child') {
-      setChildProgress(updated);
-    } else {
-      setStudentProgress(updated);
-    }
+    saveProgressState(updated);
 
     setNewlyUnlockedId(null);
     const cp = cityProgMap[cityId];
@@ -266,13 +344,8 @@ export default function App() {
       totalQuestionsAnswered: currentProgress.totalQuestionsAnswered + 5,
     };
 
-    // Save
-    StorageService.saveProgress(updated);
-    if (activeMode === 'child') {
-      setChildProgress(updated);
-    } else {
-      setStudentProgress(updated);
-    }
+    // Save locally and sync to cloud
+    saveProgressState(updated);
 
     // Trigger 3D focus and pop animation
     setNewlyUnlockedId(round);
@@ -367,6 +440,11 @@ export default function App() {
       return true;
     }
     // 4. Secondary modals
+    if (isAuthModalOpen) {
+      soundService.playClick();
+      setIsAuthModalOpen(false);
+      return true;
+    }
     if (isSettingsOpen) {
       soundService.playClick();
       setIsSettingsOpen(false);
@@ -421,6 +499,7 @@ export default function App() {
     celebrationData,
     cityCompletedData,
     isQuizModalOpen,
+    isAuthModalOpen,
     isSettingsOpen,
     isMapModalOpen,
     isWorldMapOpen,
@@ -477,6 +556,8 @@ export default function App() {
           onToggleSfx={handleToggleSfx}
           onToggleMusic={handleToggleMusic}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          userProfile={userProfile}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
         />
       )}
 
@@ -628,6 +709,22 @@ export default function App() {
         onOpenWorldMap={() => setIsWorldMapOpen(true)}
         onOpenMap={() => setIsMapModalOpen(true)}
         onOpenRewards={() => setIsRewardsModalOpen(true)}
+        userProfile={userProfile}
+        isGuest={!currentUser}
+        onOpenAuth={() => {
+          setIsSettingsOpen(false);
+          setIsAuthModalOpen(true);
+        }}
+        onLogout={handleLogout}
+      />
+
+      {/* Authentication & Guest Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onPlayAsGuest={handlePlayAsGuest}
+        isGuestPlaying={isGuestMode && !currentUser}
       />
     </div>
   );

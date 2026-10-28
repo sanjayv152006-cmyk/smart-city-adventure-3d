@@ -77,11 +77,28 @@ export class StorageService {
 
       if (data) {
         const parsed = JSON.parse(data) as Partial<GameProgress>;
-        const currentCityId = parsed.currentCityId || 1;
-        const unlockedCityIds = Array.isArray(parsed.unlockedCityIds) && parsed.unlockedCityIds.length > 0
-          ? parsed.unlockedCityIds
-          : [1];
-        const completedCityIds = Array.isArray(parsed.completedCityIds) ? parsed.completedCityIds : [];
+        const rawCityId = Number(parsed.currentCityId);
+        const currentCityId = !isNaN(rawCityId) && rawCityId >= 1 && rawCityId <= 50 ? rawCityId : 1;
+
+        const rawUnlocked = Array.isArray(parsed.unlockedCityIds) ? parsed.unlockedCityIds : [1];
+        const unlockedCityIds = Array.from(
+          new Set(
+            rawUnlocked
+              .map(Number)
+              .filter((id) => !isNaN(id) && id >= 1 && id <= 50)
+          )
+        );
+        if (!unlockedCityIds.includes(1)) unlockedCityIds.unshift(1);
+
+        const rawCompleted = Array.isArray(parsed.completedCityIds) ? parsed.completedCityIds : [];
+        const completedCityIds = Array.from(
+          new Set(
+            rawCompleted
+              .map(Number)
+              .filter((id) => !isNaN(id) && id >= 1 && id <= 50)
+          )
+        );
+
         const rawCityProgress =
           typeof parsed.cityProgress === 'object' && parsed.cityProgress !== null
             ? parsed.cityProgress
@@ -90,12 +107,18 @@ export class StorageService {
 
         for (const [key, val] of Object.entries(rawCityProgress)) {
           const numKey = Number(key);
-          if (isNaN(numKey)) continue;
+          if (isNaN(numKey) || numKey < 1 || numKey > 50) continue;
           const cp = typeof val === 'object' && val !== null ? (val as Partial<CityProgressData>) : {};
           sanitizedCityProgress[numKey] = {
-            completedRounds: Array.isArray(cp.completedRounds) ? cp.completedRounds : [],
-            unlockedLocations: Array.isArray(cp.unlockedLocations) ? cp.unlockedLocations : [],
-            claimedRewards: Array.isArray(cp.claimedRewards) ? cp.claimedRewards : [],
+            completedRounds: Array.isArray(cp.completedRounds)
+              ? cp.completedRounds.map(Number).filter((r) => !isNaN(r) && r >= 1 && r <= 10)
+              : [],
+            unlockedLocations: Array.isArray(cp.unlockedLocations)
+              ? cp.unlockedLocations.map(Number).filter((r) => !isNaN(r) && r >= 1 && r <= 10)
+              : [],
+            claimedRewards: Array.isArray(cp.claimedRewards)
+              ? cp.claimedRewards.map(Number).filter((r) => !isNaN(r) && r >= 1 && r <= 10)
+              : [],
             roundScores:
               typeof cp.roundScores === 'object' && cp.roundScores !== null ? cp.roundScores : {},
           };
@@ -105,15 +128,18 @@ export class StorageService {
           sanitizedCityProgress[currentCityId] = createInitialCityProgress();
         }
 
+        const rawCoins = Number(parsed.coins);
+        const coins = !isNaN(rawCoins) && rawCoins >= 0 ? rawCoins : INITIAL_COINS;
+
         return {
           mode,
-          coins: typeof parsed.coins === 'number' ? parsed.coins : INITIAL_COINS,
+          coins,
           currentCityId,
           unlockedCityIds,
           completedCityIds,
           cityProgress: sanitizedCityProgress,
-          totalCorrectAnswers: typeof parsed.totalCorrectAnswers === 'number' ? parsed.totalCorrectAnswers : 0,
-          totalQuestionsAnswered: typeof parsed.totalQuestionsAnswered === 'number' ? parsed.totalQuestionsAnswered : 0,
+          totalCorrectAnswers: typeof parsed.totalCorrectAnswers === 'number' && !isNaN(parsed.totalCorrectAnswers) ? Math.max(0, parsed.totalCorrectAnswers) : 0,
+          totalQuestionsAnswered: typeof parsed.totalQuestionsAnswered === 'number' && !isNaN(parsed.totalQuestionsAnswered) ? Math.max(0, parsed.totalQuestionsAnswered) : 0,
           lastPlayedAt: parsed.lastPlayedAt || new Date().toISOString(),
         };
       }

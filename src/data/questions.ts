@@ -1528,25 +1528,29 @@ export const STUDENT_BASE_QUESTIONS: Record<number, Question[]> = {
 
 /**
  * Returns exactly 5 high quality, non-repeating MCQ questions for any City (1..50) and Round (1..10).
- * City 1 uses the first 5 questions.
- * Subsequent cities rotate deterministically through the question bank so no round repeats within a city!
+ * Safe against unexpected arguments, nulls, or boundary values.
+ * City 1 uses the base questions. Subsequent cities rotate deterministically through the question bank.
  */
-export function getRoundQuestions(mode: GameMode, cityId: number, round: number): Question[] {
-  const poolMap = mode === 'child' ? CHILD_BASE_QUESTIONS : STUDENT_BASE_QUESTIONS;
-  const pool = poolMap[round] || poolMap[1];
+export function getRoundQuestions(mode: GameMode = 'child', cityId: number = 1, round: number = 1): Question[] {
+  const safeMode: GameMode = mode === 'student' ? 'student' : 'child';
+  const safeCityId = Math.max(1, Math.min(50, Math.floor(Number(cityId) || 1)));
+  const safeRound = Math.max(1, Math.min(10, Math.floor(Number(round) || 1)));
 
-  const poolLength = pool.length;
+  const poolMap = safeMode === 'child' ? CHILD_BASE_QUESTIONS : STUDENT_BASE_QUESTIONS;
+  const pool = poolMap[safeRound] || poolMap[1] || CHILD_BASE_QUESTIONS[1];
+
+  const poolLength = pool && pool.length > 0 ? pool.length : 8;
   // Deterministic starting offset based on cityId so each city gets a fresh mix
-  const offset = ((cityId - 1) * 3) % poolLength;
+  const offset = ((safeCityId - 1) * 3) % poolLength;
 
   const selected: Question[] = [];
   for (let i = 0; i < 5; i++) {
     const idx = (offset + i) % poolLength;
-    const base = pool[idx];
+    const base = pool[idx] || pool[0];
     selected.push({
       ...base,
-      id: `${mode}-c${cityId}-r${round}-q${i + 1}`,
-      round,
+      id: `${safeMode}-c${safeCityId}-r${safeRound}-q${i + 1}`,
+      round: safeRound,
     });
   }
 
@@ -1561,3 +1565,4 @@ export const CHILD_QUESTIONS: Question[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].flatM
 export const STUDENT_QUESTIONS: Question[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].flatMap((r) =>
   getRoundQuestions('student', 1, r)
 );
+

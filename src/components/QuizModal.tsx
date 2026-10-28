@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Question, GameMode } from '../types/game';
 import { CITY_LOCATIONS, ROUND_REWARDS } from '../data/locations';
@@ -40,9 +40,22 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [isFinished, setIsFinished] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  if (!isOpen || questions.length === 0) return null;
+  // Reset quiz lifecycle whenever modal is opened or round/mode changes
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentIdx(0);
+      setSelectedOption(null);
+      setIsSubmitted(false);
+      setScore(0);
+      setIsFinished(false);
+      setIsUnlocking(false);
+    }
+  }, [isOpen, roundNumber, mode]);
 
-  const currentQ = questions[currentIdx];
+  if (!isOpen || !Array.isArray(questions) || questions.length === 0) return null;
+
+  const currentQ = questions[currentIdx] || questions[0];
+  if (!currentQ) return null;
   const location = CITY_LOCATIONS.find((l) => l.id === roundNumber) || CITY_LOCATIONS[0];
   const rewardCoins = ROUND_REWARDS[roundNumber] || 100;
   const isPassed = score >= 4;

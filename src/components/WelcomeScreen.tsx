@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, HelpCircle, Trophy, Volume2, VolumeX, Music, Settings } from 'lucide-react';
+import { Play, HelpCircle, Trophy, Volume2, VolumeX, Music, Settings, User } from 'lucide-react';
 import { soundService } from '../services/sound';
 
 interface WelcomeScreenProps {
@@ -11,6 +11,8 @@ interface WelcomeScreenProps {
   onToggleSfx: () => void;
   onToggleMusic?: () => void;
   onOpenSettings?: () => void;
+  userProfile?: { username: string; email: string } | null;
+  onOpenAuth?: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
@@ -22,11 +24,45 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onToggleSfx,
   onToggleMusic,
   onOpenSettings,
+  userProfile,
+  onOpenAuth,
 }) => {
   return (
     <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-6 md:p-10 pointer-events-none z-10 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/60 overflow-y-auto">
       {/* Top Header Controls */}
-      <div className="flex justify-end items-center w-full max-w-6xl mx-auto pointer-events-auto shrink-0">
+      <div className="flex justify-between items-center w-full max-w-6xl mx-auto pointer-events-auto shrink-0">
+        {/* Architect Account / Sign In Pill */}
+        <div>
+          {userProfile ? (
+            <button
+              onClick={() => {
+                soundService.playClick();
+                if (onOpenSettings) onOpenSettings();
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-700 hover:border-emerald-400 text-xs text-white backdrop-blur-md transition-all cursor-pointer shadow-md"
+              title="Architect Account (Settings)"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+                {userProfile.username.charAt(0).toUpperCase()}
+              </div>
+              <span className="font-bold max-w-[120px] truncate">{userProfile.username}</span>
+            </button>
+          ) : (
+            onOpenAuth && (
+              <button
+                onClick={() => {
+                  soundService.playClick();
+                  onOpenAuth();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500/90 hover:bg-sky-400 text-slate-950 font-black text-xs backdrop-blur-md transition-all cursor-pointer shadow-md shadow-sky-500/20 active:scale-95"
+                title="Sign in or save progress"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Sign In / Save</span>
+              </button>
+            )
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {/* Background Music Toggle */}
           {onToggleMusic && (

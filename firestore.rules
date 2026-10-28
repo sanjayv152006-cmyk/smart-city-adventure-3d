@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['id', 'username', 'email', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'username', 'email', 'createdAt', 'updatedAt']) &&
+             data.id == userId &&
+             data.username is string &&
+             data.username.size() >= 2 &&
+             data.username.size() <= 50 &&
+             data.email is string &&
+             data.email.size() <= 128;
+    }
+
+    function isValidProgress(data, userId, mode) {
+      return data.keys().hasAll(['userId', 'mode', 'coins', 'currentCityId', 'unlockedCityIds', 'completedCityIds', 'cityProgress', 'totalCorrectAnswers', 'totalQuestionsAnswered', 'lastPlayedAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'mode', 'coins', 'currentCityId', 'unlockedCityIds', 'completedCityIds', 'cityProgress', 'totalCorrectAnswers', 'totalQuestionsAnswered', 'lastPlayedAt', 'updatedAt']) &&
+             data.userId == userId &&
+             (data.mode == 'child' || data.mode == 'student') &&
+             data.mode == mode &&
+             data.coins is number &&
+             data.coins >= 0 &&
+             data.currentCityId is number &&
+             data.unlockedCityIds is list &&
+             data.completedCityIds is list &&
+             data.cityProgress is map &&
+             data.totalCorrectAnswers is number &&
+             data.totalQuestionsAnswered is number;
+    }
+
+    // Test connection doc used for client verification
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // User profile matching owner
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false; // Blanket user queries forbidden
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUser(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUser(incoming(), userId) &&
+                       incoming().id == existing().id &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['username', 'email', 'updatedAt']);
+
+      allow delete: if false;
+
+      // Subcollection: mode-based progress
+      match /progress/{mode} {
+        allow get: if isOwner(userId) && (mode == 'child' || mode == 'student');
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         (mode == 'child' || mode == 'student') &&
+                         isValidProgress(incoming(), userId, mode);
+
+        allow update: if isOwner(userId) &&
+                         (mode == 'child' || mode == 'student') &&
+                         isValidProgress(incoming(), userId, mode) &&
+                         incoming().userId == existing().userId &&
+                         incoming().mode == existing().mode;
+
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

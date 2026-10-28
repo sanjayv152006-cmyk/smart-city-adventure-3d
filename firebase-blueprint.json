@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128
+        },
+        "username": {
+          "type": "string",
+          "description": "Player display name",
+          "maxLength": 50,
+          "minLength": 2
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "username", "email", "createdAt", "updatedAt"]
+    },
+    "GameProgressDoc": {
+      "title": "GameProgressDoc",
+      "description": "Cloud saved game progress for a mode (child or student)",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Auth UID",
+          "maxLength": 128
+        },
+        "mode": {
+          "type": "string",
+          "description": "Game mode: child or student",
+          "enum": ["child", "student"]
+        },
+        "coins": {
+          "type": "number",
+          "description": "Available coins"
+        },
+        "currentCityId": {
+          "type": "number",
+          "description": "Current city ID (1-50)"
+        },
+        "unlockedCityIds": {
+          "type": "array",
+          "description": "Array of unlocked city IDs"
+        },
+        "completedCityIds": {
+          "type": "array",
+          "description": "Array of completed city IDs"
+        },
+        "cityProgress": {
+          "type": "object",
+          "description": "Map of cityId to city completion details"
+        },
+        "totalCorrectAnswers": {
+          "type": "number",
+          "description": "Total correct answers across all quizzes"
+        },
+        "totalQuestionsAnswered": {
+          "type": "number",
+          "description": "Total questions answered across all quizzes"
+        },
+        "lastPlayedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last play session"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last sync timestamp"
+        }
+      },
+      "required": ["userId", "mode", "coins", "currentCityId", "unlockedCityIds", "completedCityIds", "cityProgress", "totalCorrectAnswers", "totalQuestionsAnswered", "lastPlayedAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public user profile document isolated to owner"
+    },
+    "/users/{userId}/progress/{mode}": {
+      "schema": "GameProgressDoc",
+      "description": "Saved game progress per game mode (child / student) for each user"
+    }
+  }
+}
